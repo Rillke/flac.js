@@ -1,0 +1,39 @@
+{
+  "name": "flac.js",
+  "version": "0.0.1",
+  "description": "JavaScript FLAC (audio format) encoder and decoder",
+  "keywords": [
+    "plugin"
+  ],
+  "homepage": "https://rillke.github.io/flac.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Rillke/flac.js.git"
+  },
+  "bugs": "https://github.com/Rillke/flac.js/issues",
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://mit-license.org/"
+    }
+  ],
+  "author": {
+    "name": "Rainer Rillke",
+    "web": "https://rillke.com"
+  },
+  "contributors": [
+    "Rainer Rillke (https://rillke.com/)"
+  ],
+  "main": "./worker/flac.js",
+  "scripts": {
+    "test": "grunt test && node test/node-index.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "qunit": "~0.5.15",
+    "grunt": "~0.4.1",
+    "grunt-contrib-jshint": "~0.4.3",
+    "grunt-contrib-qunit": "~0.2.1",
+    "qunitjs": "~1.11.0"
+  }
+}

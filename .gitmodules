@@ -1,0 +1,6 @@
+[submodule "flac"]
+	path = flac
+	url = git://github.com/Rillke/flac.git
+[submodule "libogg"]
+	path = libogg
+	url = git://github.com/Rillke/libogg.git
