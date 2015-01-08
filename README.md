@@ -1,6 +1,6 @@
 # flac.js [![Build Status](https://travis-ci.org/Rillke/flac.js.svg?branch=master)](https://travis-ci.org/Rillke/flac.js)
 
-## JavaScript Opus (audio format) Encoder
+## JavaScript FLAC (audio format) de- and encoder
 
 [**Project Website**](https://blog.rillke.com/flac.js/) • [Minimal demo](https://rawgit.com/Rillke/flac.js/master/iframe.html)
 
