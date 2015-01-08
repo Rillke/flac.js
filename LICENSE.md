@@ -161,7 +161,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 The rest of the software that the FLAC project provides is licensed under the GNU General Public License (GPL).
 
-
+```
 /* flac - Command-line FLAC encoder/decoder
  * Copyright (C) 2000-2009  Josh Coalson
  * Copyright (C) 2011-2014  Xiph.Org Foundation
@@ -180,8 +180,9 @@ The rest of the software that the FLAC project provides is licensed under the GN
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+```
 
-
+```
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
@@ -856,3 +857,4 @@ may consider it more useful to permit linking proprietary applications with
 the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <http://www.gnu.org/philosophy/why-not-lgpl.html>.
+```
