@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset='utf-8'>
+	<meta name="description" content="Flac.js : JavaScript Flac de- and encoder">
+	<link rel="shortcut icon" href="favicon.ico" />
+
+	<script src="js/jquery.js"></script>
+	<script src="js/jquery-ui.js"></script>
+
+	<link rel="stylesheet" type="text/css" media="screen" href="css/gh.css">
+	<link href="css/jquery-ui.css" rel="stylesheet">
+	<script src="js/modernizr.custom.js" async="async"></script>
+
+	<link href="css/jquery.tagit.css" rel="stylesheet" type="text/css">
+	<script src="js/tag-it.js"></script>
+	<script src="js/FileSaver.js" async="async"></script>
+
+	<title>Flac.js</title>
+
+	<style>
+		.hidden {
+			display: none;
+		}
+		.oe-js-yes,
+		.oe-pm-yes,
+		.oe-ww-yes,
+		.oe-bc-yes {
+			display: none;
+		}
+		.oe-js-no,
+		.oe-pm-no,
+		.oe-ww-no,
+		.oe-bc-no {
+			display: inline-block;
+		}
+		.js .oe-js-no,
+		.postmessage .oe-pm-no,
+		.webworkers .oe-ww-no,
+		.blobconstructor .oe-bc-no {
+			display: none;
+		}
+		.js .oe-js-yes,
+		.postmessage .oe-pm-yes,
+		.webworkers .oe-ww-yes,
+		.blobconstructor .oe-bc-yes {
+			display: inline-block;
+		}
+		.ui-autocomplete {
+			overflow: auto;
+			max-height: 13em;
+		}
+		.ui-menu-item,
+		.oe-console {
+			box-sizing: border-box;
+			-moz-box-sizing: border-box;
+			-webkit-box-sizing: border-box;
+		}
+		.oe-console,
+		.oe-console .tagit,
+		.oe-console input,
+		.oe-console pre {
+			background: none repeat scroll 0% 0% black;
+			color: white;
+			font-family: "Lucida Console", Console, monospace;
+		}
+		.oe-console-pre {
+			white-space: pre-wrap;
+		}
+		.oe-console .tagit,
+		.oe-console input {
+			border: none;
+		}
+		.ui-menu-item.ui-state-focus {
+			margin: -1px 0px;
+		}
+		.oe-progress-dialog {
+			box-shadow: 0px 0px 15px #000;
+		}
+		.tagit-new input {
+			min-width: 15em;
+		}
+		pre.oe-console-errors {
+			color: #FF7373;
+		}
+		.oe-browser-support-check {
+			white-space: nowrap;
+		}
+		.oe-console-info,
+		.oe-console-errors {
+			width: 100%;
+			border: medium none;
+			padding: 0px;
+			white-space: pre-wrap;
+			resize: none;
+		}
+		.oe-file-warn {
+			display: none;
+		}
+		body.oe-acceptdrop #main_content_wrap {
+			background-color: #B7D9E0;
+		}
+		.oe-dnd-info {
+			position: fixed;
+			padding: 4em;
+			top: 50%;
+			left: 50%;
+			margin-left: -6em;
+			margin-top: -4.5em;
+			font-size: 2em;
+			display: none;
+		}
+		.oe-acceptdrop .oe-dnd-info {
+			display: block;
+		}
+	</style>
+
+</head>
+
+<body>
+	<!-- HEADER -->
+	<div id="header_wrap" class="outer">
+		<div class="ui-widget oe-js-warn">
+			<div class="ui-state-error ui-corner-all" style="padding: 0 .7em;">
+				<p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em; margin-top: .3em;"></span>
+					<strong>JavaScript error:</strong> Either JavaScript is still loading, it is disabled or something went terribly wrong. The demo will most likely not work. Please <a href="https://github.com/Rillke/flac.js/issues"><u>report this issue</u></a> so it can be fixed.</p>
+			</div>
+		</div>
+		<div class="ui-widget oe-file-warn">
+			<div class="ui-state-highlight ui-corner-all" style="padding: 0 .7em;">
+				<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em; margin-top: .3em;"></span>
+					<strong>Running from file:///</strong> When running from file:/// protocol, it might be impossible to load the worker code due to security restrictions. Chrome and Opera can be started with the <code>--allow-file-access-from-files</code> command line argument to bypass this kind of protection. However, if access from files is granted, the browser should not be used to browse other sites.</p>
+			</div>
+		</div>
+		<header class="inner">
+			<a id="forkme_banner" href="https://github.com/Rillke/flac.js">View on GitHub</a>
+
+			<h1 id="project_title">Flac.js</h1>
+			<h2 id="project_tagline">JavaScript FLAC de- and encoder</h2>
+
+			<section id="downloads">
+				<!-- Make w3c's validator (and possibly search engines) happy and add a heading to this section -->
+				<h3 class="hidden">Downloads</h3>
+				<a class="zip_download_link" href="https://github.com/Rillke/flac.js/zipball/master">Download this project as a .zip file</a>
+				<a class="tar_download_link" href="https://github.com/Rillke/flac.js/tarball/master">Download this project as a tar.gz file</a>
+			</section>
+		</header>
+	</div>
+
+	<!-- MAIN CONTENT -->
+	<article id="main_content_wrap" class="outer">
+		<h2 class="hidden">Flac.js</h2>
+		<section id="main_content" class="inner">
+			<h2 class="hidden">What is Flac.js?</h2>
+			<strong>Flac.js</strong> is a JavaScript port of the <a href="//xiph.org/flac/documentation_tools_flac.html"><em>flac</em> tool</a>, which in turn is part of the <a href="//xiph.org/flac/download.html"><em>flac</em></a> package, created with <em>Emscripten</em>. To say it in simple words, one could <a href="https://github.com/Rillke/flac.js/zipball/gh-pages"><strong>download</strong> all the static files</a> making up this page and running them offline in a modern browser. No server side processing is required. Together with the sound recording API of contemporary browsers, one can not only build <em>powerful audio editing solutions</em> but also <a href="https://github.com/Rillke/Recorderjs#recorderjs"><em>sound recording tools</em></a>.
+			<br /> What is FLAC and why is FLAC great:
+			<blockquote>
+				<p>FLAC stands for Free Lossless Audio Codec, an audio format similar to MP3, but lossless, meaning that audio is compressed in FLAC without any loss in quality. This is similar to how Zip works, except with FLAC you will get much better compression because it is designed specifically for audio, and you can play back compressed FLAC files in your favorite player (or your car or home stereo, see supported devices) just like you would an MP3 file.</p>
+
+				<p>FLAC stands out as the fastest and most widely supported lossless audio codec, and the only one that at once is non-proprietary, is unencumbered by patents, has an open-source reference implementation, has a well documented format and API, and has several other independent implementations.</p>
+				<cite><a href="//xiph.org/flac/index.html">xiph.org/flac</a></cite>
+			</blockquote>
+			To summarize: <strong>High compression rates</strong>, <strong>no loss in quality</strong>, <strong>lightning fast de- and encoding</strong>.
+			<section id="oe-demo">
+				<h2>
+  <a id="flac.js-demo" class="anchor" href="#flac.js-demo" aria-hidden="true"><span class="octicon octicon-link"></span></a>Demo</h2>
+				<p>Try Flac.js, right here, right now. Clicking <em>run</em> will prompt for a WAV, AIFF, <abbr title="in its native container as well as in oga/ogg">FLAC<sup>*</sup></abbr>, or <abbr title="Raw files require feeding the flac tool with additional information through command line switches; type --raw for suggestions">RAW<sup>*</sup></abbr> file.</p>
+
+				<!-- Browser support check -->
+				<section id="oe-browser-support">
+					<h3>
+  <a id="flac.js-browser-support" class="anchor" href="#flac.js-browser-support" aria-hidden="true"><span class="octicon octicon-link"></span></a>Browser support</h3>
+					<p>In order to run the flac tool in a browser, there has to be support for a couple of HTML5 features.</p>
+
+					<code class="oe-browser-support-check"><span class="ui-icon ui-icon-alert oe-js-no"></span><span class="ui-icon ui-icon-check oe-js-yes"></span> JavaScript</code>
+					<code class="oe-browser-support-check"><span class="ui-icon ui-icon-alert oe-pm-no"></span><span class="ui-icon ui-icon-check oe-pm-yes"></span> PostMessage</code>
+					<code class="oe-browser-support-check"><span class="ui-icon ui-icon-alert oe-ww-no"></span><span class="ui-icon ui-icon-check oe-ww-yes"></span> WebWorkers</code>
+					<code class="oe-browser-support-check"><span class="ui-icon ui-icon-alert oe-bc-no"></span><span class="ui-icon ui-icon-check oe-bc-yes"></span> Blob constructor</code>
+
+				</section>
+
+				<!-- Command line switches -->
+				<section id="oe-command-line-options">
+					<h3><a id="flac.js-cmd-switches" class="anchor" href="#flac.js-cmd-switches" aria-hidden="true"><span class="octicon octicon-link"></span></a>Additional command line switches</h3>
+					<div class="oe-console oe-console-pre">encoder@rillke.com$ flac
+  <div style="display: inline-block; padding-left: 6em;"><input name="tags" id="oe-cmd-options" value="" placeholder="(e.g. --quiet in.wav -o out.flac)" style="width: 100%" class="oe-console" autocomplete="off" /></div>
+					</div>
+				</section>
+				<div>&nbsp;</div>
+
+				<!-- Run -->
+				<section id="oe-run">
+					<h3 class="hidden">Run the demo</h3>
+					<div style="position:relative; width: 7em; height: 5em; overflow: hidden;">
+						<button id="oe-run-button" style="position:absolute; top:0; left: 0; z-index: 0" type="button" title="Run flac.js">Run</button>
+						<form>
+							<input id="oe-run-file" style="position:absolute; top:-30px; left: -30px; z-index: 2; font-size: 70px; cursor: pointer; opacity: 0" autofocus="" type="file" title="Run the flac tool" accept="audio/vnd.wave,audio/wav,audio/wave,audio/x-wav,audio/x-flac,audio/flac,audio/ogg,application/ogg,audio/x-aiff,audio/aiff,.aiff,.aif,.aifc,.ogg,.oga,.flac,.wav,.wave,.raw,.rf64,.w64" autocomplete="off" />
+						</form>
+					</div>
+				</section>
+
+				<!-- Borrow some sample audio files -->
+				<section id="oe-sample-files">
+					<h3>Borrow sample audio files</h3>
+					<ul id="oe-sample-files-list">
+						<li>Loading ...</li>
+					</ul>
+				</section>
+			</section>
+
+			<!-- Ways to give  -->
+			<section id="oe-credits">
+				<h2>
+<a id="flac.js-credits" class="anchor" href="#flac.js-credits" aria-hidden="true"><span class="octicon octicon-link"></span></a>Ways to give</h2>
+				<p>Flac.js made your day?</p>
+				<ul>
+					<li>Setting up this project has been made possible through an <a href="//meta.wikimedia.org/wiki/Grants:IEG">Individual Engagement Grant</a> by the Wikimedia Foundation. Donate to the <a href="https://wikimediafoundation.org/wiki/Ways_to_Give?source=flac:rillke">Wikimedia Foundation</a> or to <a href="https://spenden.wikimedia.de/spenden/?piwik_campaign=flac:rillke&amp;piwik_kwd=Spendenaufruf">Wikimedia Germany</a>.</li>
+					<li>The Mozilla Foundation supported the development of Emscripten. <a href="https://sendto.mozilla.org/?source=flac:rillke">Donate to Mozilla</a>.</li>
+					<li>Xiph.org is <a href="//xiph.org/flac/?source=flac:rillke">hosting the FLAC project's infrastructure</a>. Their developers created the FLAC audio codec and the command line tool. <a href="https://xiph.org/donate/?source=flac:rillke">Donate to Xiph.org</a>.</li>
+					<li><a href="https://github.com/?source=flac:rillke">GitHub</a> hosts this site and the Flac.js code.</li>
+					<li><a href="//rillke.com/?source=flac:rillke">Rillke</a> ported the <code>flac</code> command line tool to JavaScript. Star, fork or watch the <a href="https://github.com/Rillke/flac.js">project on GitHub</a>.</li>
+				</ul>
+			</section>
+
+			<!-- Comments -->
+			<section id="oe-discuss">
+				<h2>
+<a id="flac.js-discuss" class="anchor" href="#flac.js-discuss" aria-hidden="true"><span class="octicon octicon-link"></span></a>Comments</h2>
+				<div id="disqus_thread" aria-live="polite">
+					<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+					</noscript>
+					<script type="text/javascript">
+						var disqus_shortname = 'rillke-blog';
+
+						// var disqus_developer = 1;
+						var disqus_identifier = 'https://blog.rillke.com/flac.js/';
+						var disqus_url = 'https://blog.rillke.com/flac.js/';
+						var disqus_script = 'embed.js';
+
+						(function() {
+							var dsq = document.createElement('script');
+							dsq.type = 'text/javascript';
+							dsq.async = true;
+							dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+							(document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+						}());
+					</script>
+				</div>
+			</section>
+
+		</section>
+	</article>
+
+	<!-- FOOTER  -->
+	<div class="ui-widget oe-js-warn">
+		<div class="ui-state-error ui-corner-all" style="padding: 0 .7em;">
+			<p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em; margin-top: .3em;"></span>
+				<strong>JavaScript error:</strong> Either JavaScript is still loading, it is disabled or something went terribly wrong. The demo will most likely not work. Please <a href="https://github.com/Rillke/flac.js/issues"><u>report this issue</u></a> so it can be fixed.</p>
+		</div>
+	</div>
+	<div class="ui-widget oe-file-warn">
+		<div class="ui-state-highlight ui-corner-all" style="padding: 0 .7em;">
+			<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em; margin-top: .3em;"></span>
+				<strong>Running from file:///</strong> When running from file:/// protocol, it might be impossible to load the worker code due to security restrictions. Chrome and Opera can be started with the <code>--allow-file-access-from-files</code> command line argument to bypass this kind of protection. However, if access from files is granted, the browser should not be used to browse other sites.</p>
+		</div>
+	</div>
+	<div id="footer_wrap" class="outer">
+		<footer class="inner">
+			<p class="copyright">Flac.js maintained by <a href="https://github.com/Rillke">Rillke</a>. <a href="https://github.com/Rillke/flac.js/issues">Report</a> bugs, issues or feature requests.
+			<br />This page's software <a href="gpl.txt">GPL licensed</a>. Content: <a rel="license" href="//creativecommons.org/licenses/by-sa/3.0/"><img alt="This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 Unported License" style="border-width:0" src="images/cc-by-sa-88x31.png" /></a></p>
+
+			<section id="oe-share">
+				<h3 style="font-size:inherit; font-weight:inherit; text-decoration:none; display:inline-block; color:#F2F2F2; background:none;">
+<a id="flac.js-share" class="anchor" href="#flac.js-share" aria-hidden="true"><span class="octicon octicon-link"></span></a>Share:</h3> •
+				<a href="https://www.facebook.com/sharer.php?u=https%3A%2F%2Frillke.github.io%2Fflac.js&amp;t=Flac.js%20%3A%20JavaScript%20FLAC%20de-%20and%20encoder">
+            On Facebook</a> •
+				<a href="https://twitter.com/share?via=WikiCommons&amp;text=Client%20site%20FLAC%20encoding&amp;url=https%3A%2F%2Frillke.github.io%2Fflac.js">
+            On Twitter</a> •
+				<a href="mailto:?subject=Client%20site%20FLAC%20encoding&amp;body=https%3A%2F%2Frillke.github.io%2Fflac.js">
+            Via eMail</a> •
+				<a href="https://plus.google.com/share?url=https%3A%2F%2Frillke.github.io%2Fflac.js">
+            On Google+</a> •
+				<a href="https://reddit.com/submit?url=https%3A%2F%2Frillke.github.io%2Fflac.js&amp;title=Flac.js%20%3A%20JavaScript%20FLAC%20de-%20and%20encoder">
+            On Reddit</a> •
+			</section>
+		</footer>
+	</div>
+
+	<!-- Drag & Drop info -->
+	<div class="ui-state-highlight oe-dnd-info">
+		Drop your file here!
+	</div>
+
+	<!-- Audio element for testing -->
+	<audio class="hidden oe-test-clip" controls="controls" preload="auto"></audio>
+
+	<!-- Demo JavaScript -->
+	<script src="js/sample.tags.js"></script>
+	<script src="audio/index.js"></script>
+	<script src="js/sample.js" async="async"></script>
+
+	<!-- Google Analytics -->
+	<!-- 
+	     Not available. Might be a breach of GPL.
+	-->
+</body>
+
+</html>
