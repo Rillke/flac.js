@@ -61,6 +61,9 @@ worker.postMessage( {
 
 A more extensive example is available on the [project's website](https://blog.rillke.com/flac.js/).
 
+### Bummer! A 3.5 MiB web worker!
+Yeah, the data file - `flac.data.js` - is huge but conists mostly of null characters and compresses very well; a compressed size of 30.2 KB when sent `gzip`ed is possible.
+
 ## Contributing
 Submit patches to this GitHub repository or [file issues](https://github.com/Rillke/flac.js/issues).
 
