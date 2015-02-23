@@ -74,6 +74,10 @@ A more extensive example is available on the [project's website](https://blog.ri
 ### Bummer! A 3.5 MiB web worker!
 Yeah, the data file - `flac.data.js` - is huge but conists mostly of null characters and compresses very well; a compressed size of 30.2 KB when sent `gzip`ed is possible.
 
+In case one is just out for encoding to flac, one might replace `worker/flac.js` with `worker/flac.encoder.js` and `worker/flac.data.js` with `flac.encoder.data.js` in the [downloaded project page](https://github.com/Rillke/flac.js/zipball/gh-pages). This way the worker is about 1 MiB in total (uncompressed).
+
+The 3.5 MiB results from flac's decoder and analyzer's [huge stack size](http://lists.xiph.org/pipermail/flac-dev/2015-January/005420.html).
+
 ## Contributing
 Submit patches to this GitHub repository or [file issues](https://github.com/Rillke/flac.js/issues).
 
