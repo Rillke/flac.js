@@ -27,7 +27,7 @@ git submodule update --init
 #### Encoder
 ```bash
 git clone git://github.com/Rillke/flac.js.git flacenc.js
-cd flac.js
+cd flacenc.js
 git checkout encoder
 git submodule update --init
 ./make.sh
