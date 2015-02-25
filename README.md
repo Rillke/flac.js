@@ -9,7 +9,7 @@ flac.js encodes or decodes whole files to FLAC, the Free Lossless Audio Codec. S
 flac.js was built with Emscripten.
 
 ## Building
-If you just want to use flac.js, you don't have to build it. In this case, see [using](#Using) instead.
+If you just want to use flac.js, you don't have to build it. In this case, see [using](#using) instead.
 
 ### Prerequisites
 - A recent linux build system
