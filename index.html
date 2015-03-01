@@ -19,120 +19,12 @@
 
 	<title>Flac.js</title>
 
-	<style>
-		.hidden {
-			display: none;
-		}
-		.oe-js-yes,
-		.oe-pm-yes,
-		.oe-ww-yes,
-		.oe-bc-yes {
-			display: none;
-		}
-		.oe-js-no,
-		.oe-pm-no,
-		.oe-ww-no,
-		.oe-bc-no {
-			display: inline-block;
-		}
-		.js .oe-js-no,
-		.postmessage .oe-pm-no,
-		.webworkers .oe-ww-no,
-		.blobconstructor .oe-bc-no {
-			display: none;
-		}
-		.js .oe-js-yes,
-		.postmessage .oe-pm-yes,
-		.webworkers .oe-ww-yes,
-		.blobconstructor .oe-bc-yes {
-			display: inline-block;
-		}
-		.ui-autocomplete {
-			overflow: auto;
-			max-height: 13em;
-		}
-		.ui-menu-item,
-		.oe-console {
-			box-sizing: border-box;
-			-moz-box-sizing: border-box;
-			-webkit-box-sizing: border-box;
-		}
-		.oe-console,
-		.oe-console .tagit,
-		.oe-console input,
-		.oe-console pre {
-			background: none repeat scroll 0% 0% black;
-			color: white;
-			font-family: "Lucida Console", Console, monospace;
-		}
-		.oe-console-pre {
-			white-space: pre-wrap;
-		}
-		.oe-console .tagit,
-		.oe-console input {
-			border: none;
-		}
-		.ui-menu-item.ui-state-focus {
-			margin: -1px 0px;
-		}
-		.oe-progress-dialog {
-			box-shadow: 0px 0px 15px #000;
-		}
-		.tagit-new input {
-			min-width: 15em;
-		}
-		pre.oe-console-errors {
-			color: #FF7373;
-		}
-		.oe-browser-support-check {
-			white-space: nowrap;
-		}
-		.oe-console-info,
-		.oe-console-errors {
-			width: 100%;
-			border: medium none;
-			padding: 0px;
-			white-space: pre-wrap;
-			resize: none;
-		}
-		.oe-file-warn {
-			display: none;
-		}
-		body.oe-acceptdrop #main_content_wrap {
-			background-color: #B7D9E0;
-		}
-		.oe-dnd-info {
-			position: fixed;
-			padding: 4em;
-			top: 50%;
-			left: 50%;
-			margin-left: -6em;
-			margin-top: -4.5em;
-			font-size: 2em;
-			display: none;
-		}
-		.oe-acceptdrop .oe-dnd-info {
-			display: block;
-		}
-	</style>
-
+	<link href="css/sample.css" rel="stylesheet" type="text/css">
 </head>
 
 <body>
 	<!-- HEADER -->
 	<div id="header_wrap" class="outer">
-		<div class="ui-widget oe-js-warn">
-			<div class="ui-state-error ui-corner-all" style="padding: 0 .7em;">
-				<p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em; margin-top: .3em;"></span>
-					<strong>JavaScript error:</strong> Either JavaScript is still loading, it is disabled or something went terribly wrong. The demo will most likely not work. Please <a href="https://github.com/Rillke/flac.js/issues"><u>report this issue</u></a> so it can be fixed.</p>
-			</div>
-		</div>
-		<div class="ui-widget oe-file-warn">
-			<div class="ui-state-highlight ui-corner-all" style="padding: 0 .7em;">
-				<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em; margin-top: .3em;"></span>
-					<strong>Running from file:///</strong> When running from file:/// protocol, it might be impossible to load the worker code due to security restrictions. Chrome and Opera can be started with the <code>--allow-file-access-from-files</code> command line argument to bypass this kind of protection. However, if access from files is granted, the browser should not be used to browse other sites.</p>
-			</div>
-		</div>
 		<header class="inner">
 			<a id="forkme_banner" href="https://github.com/Rillke/flac.js">View on GitHub</a>
 
@@ -252,6 +144,21 @@
 		</section>
 	</article>
 
+	<div class="oe-top-warning">
+		<div class="ui-widget oe-js-warn">
+			<div class="ui-state-error ui-corner-all" style="padding: 0 .7em;">
+				<p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em; margin-top: .3em;"></span>
+					<strong>JavaScript error:</strong> Either JavaScript is still loading, it is disabled or something went terribly wrong. The demo will most likely not work. Please <a href="https://github.com/Rillke/opusenc.js/issues"><u>report this issue</u></a> so it can be fixed.</p>
+			</div>
+		</div>
+		<div class="ui-widget oe-file-warn">
+			<div class="ui-state-highlight ui-corner-all" style="padding: 0 .7em;">
+				<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em; margin-top: .3em;"></span>
+					<strong>Running from file:///</strong> When running from file:/// protocol, it might be impossible to load the worker code due to security restrictions. Chrome and Opera can be started with the <code>--allow-file-access-from-files</code> command line argument to bypass this kind of protection. However, if access from files is granted, the browser should not be used to browse other sites.</p>
+			</div>
+		</div>
+	</div>
+
 	<!-- FOOTER  -->
 	<div class="ui-widget oe-js-warn">
 		<div class="ui-state-error ui-corner-all" style="padding: 0 .7em;">
@@ -271,8 +178,8 @@
 			<br />This page's software is <a href="gpl.txt">GPL licensed</a>. Content: <a rel="license" href="//creativecommons.org/licenses/by-sa/3.0/"><img alt="This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 Unported License" style="border-width:0" src="images/cc-by-sa-88x31.png" /></a></p>
 
 			<section id="oe-share">
-				<h3 style="font-size:inherit; font-weight:inherit; text-decoration:none; display:inline-block; color:#F2F2F2; background:none;">
-<a id="flac.js-share" class="anchor" href="#flac.js-share" aria-hidden="true"><span class="octicon octicon-link"></span></a>Share:</h3> •
+				<h4 style="color:#F2F2F2;">
+<a id="flac.js-share" class="anchor" href="#flac.js-share" aria-hidden="true"><span class="octicon octicon-link"></span></a>Share</h4>
 				<a href="https://www.facebook.com/sharer.php?u=https%3A%2F%2Frillke.github.io%2Fflac.js&amp;t=Flac.js%20%3A%20JavaScript%20FLAC%20de-%20and%20encoder">
             On Facebook</a> •
 				<a href="https://twitter.com/share?via=WikiCommons&amp;text=Client%20site%20FLAC%20encoding&amp;url=https%3A%2F%2Frillke.github.io%2Fflac.js">
@@ -282,7 +189,25 @@
 				<a href="https://plus.google.com/share?url=https%3A%2F%2Frillke.github.io%2Fflac.js">
             On Google+</a> •
 				<a href="https://reddit.com/submit?url=https%3A%2F%2Frillke.github.io%2Fflac.js&amp;title=Flac.js%20%3A%20JavaScript%20FLAC%20de-%20and%20encoder">
-            On Reddit</a> •
+            On Reddit</a>
+			</section>
+			<section id="oe-more">
+				<h4 style="color:#F2F2F2;">
+<a id="flac.js-more" class="anchor" href="#flac.js-share" aria-hidden="true"><span class="octicon octicon-link"></span></a>Discover more</h4>
+				<!--
+				<a href="//blog.rillke.com/flac-stream.js">
+            Flac-stream.js</a> •
+				--><a href="//blog.rillke.com/Opusenc.js">
+            Opusenc.js</a><!-- •
+				<a href="//blog.rillke.com/opusenc-stream.js">
+            Opusenc-stream.js</a> •
+				<a href="//blog.rillke.com/ogg-vorbis.js">
+            Ogg-Vorbis.js</a> •
+				<a href="//blog.rillke.com/wave-metadata.js">
+            Wave file metadata writer</a> •
+				<a href="//blog.rillke.com/prg">
+            Pronunciation Recording Gadget</a>
+				-->
 			</section>
 		</footer>
 	</div>
