@@ -1,0 +1,6 @@
+<Files flac.data.js>
+   ForceType application/octet-stream
+</Files>
+<Files flac.encoder.data.js>
+   ForceType application/octet-stream
+</Files>
