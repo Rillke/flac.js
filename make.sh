@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 export GITDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/"
 export FLACOUTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/flac/src/flac/.libs/"
 
@@ -27,6 +27,8 @@ cd ../libogg
 ln -s src/.libs lib
 ln -s include/ogg ogg
 cd ../flac
+# fix issue #7: "bad ioctl syscall"
+sed -i.bak '/#define GWINSZ_IN_SYS_IOCTL 1/d' config.h
 emmake make
 export FLACDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/
 cd ..
