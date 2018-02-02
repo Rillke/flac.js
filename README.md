@@ -6,19 +6,19 @@
 
 flac.js encodes or decodes whole files to FLAC, the Free Lossless Audio Codec. Supported input formats are `wav`, `rf64`, `w64`, `aif`, `flac` (flac in its native container as well as in oga/ogg). It is supposed to do the same as the flac executable that can be built from the FLAC sources.
 
-flac.js was built with Emscripten.
+This version of flac.js was built with Emscripten 1.37.20; flac 1.3.2; libogg 1.3.3
 
 ## Building
 If you just want to use flac.js, you don't have to build it. In this case, see [using](#using) instead.
 
 ### Prerequisites
 - A recent linux build system
-- Emscripten 1.25.0 installed and activated
+- Emscripten installed and activated
 
 ### Build script
 #### Fully-featured tool
 ```bash
-git clone git://github.com/Rillke/flac.js.git flac.js
+git ct://github.com/Rillke/flac.js.git flac.js
 cd flac.js
 git submodule update --init
 ./make.sh
@@ -71,15 +71,9 @@ worker.postMessage( {
 
 A more extensive example is available on the [project's website](https://blog.rillke.com/flac.js/).
 
-### Bummer! A 3.5 MiB web worker!
-Yeah, the data file - `flac.data.js` - is huge but conists mostly of null characters and compresses very well; a compressed size of 30.2 KB when sent `gzip`ed is possible.
-
-In case one is just out for encoding to flac, one might replace `worker/flac.js` with `worker/flac.encoder.js` and `worker/flac.data.js` with `flac.encoder.data.js` in the [downloaded project page](https://github.com/Rillke/flac.js/zipball/gh-pages). This way the worker is about 1 MiB in total (uncompressed).
-
-The 3.5 MiB results from flac's decoder and analyzer's [huge stack size](http://lists.xiph.org/pipermail/flac-dev/2015-January/005420.html).
-
 ## Contributing
 Submit patches to this GitHub repository or [file issues](https://github.com/Rillke/flac.js/issues).
 
 ## License
 See [LICENSE.md](LICENSE.md)
+
