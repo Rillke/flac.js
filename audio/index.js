@@ -32,7 +32,7 @@
 			title: '"Follow me up to Carlow"',
 			source: 'https://www.jamendo.com/de/track/453145/follow-me-up-to-carlow',
 			copyright: 'Copyright 2009 Christoph Nolte, <a href="//creativecommons.org/licenses/by-sa/3.0">cc-by-sa 3.0</a>',
-			info: 'Song, 16 bit 44.100 kHz, FLAC in its native container',
+			info: 'Song, 16 bit 44.100 kHz, FLAC in its native container. Use -d switch for decoding!',
 			size: 15.0,
 			supported: true
 		},

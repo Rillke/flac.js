@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-/*global self: false, Runtime: false, FlacEncoder: false, Module: false, FS: false, EmsArgs: false, console: false */
+/*global self: false, Runtime: false, FlacEncoder: false, Module: false, FS: false, EmsArgs: false, console: false, WebAssembly: false */
 /*jslint vars: false,  white: false */
 /*jshint onevar: false, white: false, laxbreak: true, worker: true, strict: false */
 
@@ -130,7 +130,9 @@
 					console.log( 'Loading run dependencies. Outstanding: ' + runDeps );
 				},
 				locateFile: function( memFile ) {
-					return memFile.replace( /^flac\.(html|js)\.mem$/, 'flac.data.js' );
+					return memFile
+						.replace( /^flac\.(html|js)\.mem$/, 'asm/flac.mem.png' )
+						.replace( 'flac.wasm', 'wasm/flac.wasm.png' );
 				}
 			};
 		},
@@ -288,7 +290,7 @@
 	 *  @private
 	 */
 	MainScriptLoader = {
-		name: 'flac.js',
+		name: ( global.WebAssembly ? 'wasm/' : 'asm/' ) + 'flac.js',
 		text: null,
 		status: 'idle',
 		xhrload: function( data, complete, err ) {
