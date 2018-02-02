@@ -16,20 +16,9 @@ If you just want to use flac.js, you don't have to build it. In this case, see [
 - Emscripten installed and activated
 
 ### Build script
-#### Fully-featured tool
 ```bash
-git ct://github.com/Rillke/flac.js.git flac.js
+git clone --recursive git://github.com/Rillke/flac.js.git flac.js
 cd flac.js
-git submodule update --init
-./make.sh
-```
-
-#### Encoder
-```bash
-git clone git://github.com/Rillke/flac.js.git flacenc.js
-cd flacenc.js
-git checkout encoder
-git submodule update --init
 ./make.sh
 ```
 
