@@ -1,6 +1,6 @@
 # License
 
-In one senctence: The most restrictive license is the
+In one sentence: The most restrictive license is the
 [GNU General Public License](http://www.gnu.org/licenses/licenses.html#GPL) version 3.
 Mind the details below.
 
@@ -25,7 +25,7 @@ and the three-clause BSD license and the third version of the
 
 ### Emscripten
 
-Several parts of the C standard library were implemeted by Emscripten
+Several parts of the C standard library were implemented by Emscripten
 developers in JavaScript and compiled together with the FLAC code.
 
 Emscripten is available under 2 licenses, the MIT license and the
