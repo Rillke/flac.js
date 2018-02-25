@@ -1,22 +1,14 @@
 {
-  "name": "flac.js",
+  "name": "flac-tool.js",
   "version": "1.3.2",
-  "description": "JavaScript FLAC (audio format) encoder and decoder",
+  "description": "JavaScript FLAC (audio format) encoder and decoder (front-end package only)",
   "keywords": [
-    "plugin"
+    "flac", "encoder", "decoder", "command-line", "lossless", "audio", "codec"
   ],
-  "homepage": "https://rillke.github.io/flac.js",
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/Rillke/flac.js.git"
-  },
+  "homepage": "https://blog.rillke.com/flac.js/",
+  "repository": "github:Rillke/flac.js",
   "bugs": "https://github.com/Rillke/flac.js/issues",
-  "licenses": [
-    {
-      "type": "MIT",
-      "url": "http://mit-license.org/"
-    }
-  ],
+  "license": "C.f. https://github.com/Rillke/flac.js/blob/master/LICENSE.md",
   "author": {
     "name": "Rainer Rillke",
     "web": "https://rillke.com"
@@ -24,7 +16,6 @@
   "contributors": [
     "Rainer Rillke (https://rillke.com/)"
   ],
-  "main": "./worker/flac.js",
   "scripts": {
     "test": "grunt test && node test/node-index.js"
   },
