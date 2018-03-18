@@ -1,5 +1,5 @@
 /*!
- * Copyright © 2014 Rainer Rillke <lastname>@wikipedia.de
+ * Copyright Â© 2014 Rainer Rillke <lastname>@wikipedia.de
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -331,7 +331,7 @@
 			'fmt': '#',
 			'desc': 'Size of the raw input in bytes',
 			'constraint': '#',
-			'regexp': /^(?:signed|unsigned)$/
+			'regexp': /^\d+$/
 		},
 		'no-adaptive-mid-side': {},
 		'no-cued-seekpoints': {},
