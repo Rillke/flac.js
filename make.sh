@@ -65,7 +65,7 @@ function make_js {
     # ALLOW_MEMORY_GROWTH=1 does not cause performance penalties
     # for WASM build and changing TOTAL_MEMORY at runtime is not
     # supported.
-    em++ -O3 "${OGGDIR}/lib/libogg.so" "${FLACDIR}/src/libFLAC/.libs/libFLAC.so" flac.so -o flac.html -s EXPORTED_FUNCTIONS="['_main_js']" -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s RESERVED_FUNCTION_POINTERS=1
+    em++ -O3 "${OGGDIR}/lib/libogg.so" "${FLACDIR}/src/libFLAC/.libs/libFLAC.so" flac.so -o flac.html -s EXPORTED_FUNCTIONS="['_main_js']" -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s RESERVED_FUNCTION_POINTERS=1 -s "BINARYEN_TRAP_MODE='clamp'"
     cp -f flac.js "${DIR}/worker/wasm/flac${FLAC_VARIANT}.js"
     cp -f flac.wasm "${DIR}/worker/wasm/flac${FLAC_VARIANT}.wasm.png"
 
@@ -91,14 +91,14 @@ function clean {
   cd $FLACDIR && git clean -fdx
 }
 
-#make_ogg
-#checkout_flacfull
-#make_flac
-#make_js
-#checkout_flacenc
-#make_flac
-#make_js
-#checkout_flacfull
+make_ogg
+checkout_flacfull
+make_flac
+make_js
+checkout_flacenc
+make_flac
+make_js
+checkout_flacfull
 run_js
 
 cd $PREV_DIR
