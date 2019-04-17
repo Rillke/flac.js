@@ -27,6 +27,17 @@ A pre-compiled script together with some auxiliary scripts making use from JavaS
 [iframe.html](iframe.html) is a minimal usage example. [Test it live](https://rawgit.com/Rillke/flac.js/master/iframe.html). It starts the encoding process posting `command: 'encode'` to the worker:
 ```JavaScript
 var worker = new Worker( 'worker/EmsWorkerProxy.js' );
+
+// Input data
+var fileName = 'pcmData.raw';
+var inData = {
+	// File name
+	fileName: {
+		// Must be Uint8
+		fileData
+	}
+}
+
 // Files to be read and posted back
 // after encoding completed
 var outData = {
@@ -41,7 +52,19 @@ worker.onmessage = function( e ) {
 	// Handle incoming data
 };
 
-// Prepare files etc.
+worker.onerror = function( e ) {
+	// Handle error
+};
+
+// Arguments
+var args = [
+    "--endian=little", // endianness of samples
+    "--sign=unsigned", // representation of numbers
+    "--channels=1", // channel count
+    "--bps=8", // bits per second
+    "--sample-rate=16000", // sample rate in Hz
+    fileName
+];
 
 // Post all data and the encode command
 // to the web worker
@@ -49,7 +72,7 @@ worker.postMessage( {
 	command: 'encode',
 	args: args,
 	outData: outData,
-	fileData: storedFiles
+	fileData: inData
 } );
 ```
 
