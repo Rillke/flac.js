@@ -125,16 +125,16 @@
 						// In this case it's only one because we didn't
 						// use a command line argument that would force
 						// flac.js to create another file
-            /*
+						/*
 						$('<a>')
 							.text(fileName)
 							.prop('href',
 								window.URL.createObjectURL(e.data.values[fileName].blob)
 							)
 							.insertAfter($input);
-            */
-            var blob = e.data.values[fileName].blob;
-            saveAs(blob, fileName);
+						*/
+						var blob = e.data.values[fileName].blob;
+						saveAs(blob, fileName); // saveAs is a function provided by FileSaver.js
 					}
 				}
 			};
