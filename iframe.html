@@ -77,40 +77,39 @@
 				// from inserting another file
 				input.disabled = true;
 
-				// Read the file's contents as ArrayBuffer
-				f.arrayBuffer().then(function(buffer) {
-					// FLAC input files are decoded, everything else is encoded
-					var decode = /\.(flac|oga|ogg)$/i.test(f.name),
-						outName = f.name.replace(/\.[^.]+$/, '') + (decode ? '.wav' : '.flac');
+				// FLAC input files are decoded, everything else is encoded
+				var decode = /\.(flac|oga|ogg)$/i.test(f.name),
+					outName = f.name.replace(/\.[^.]+$/, '') + (decode ? '.wav' : '.flac');
 
-					// Command line arguments
-					// These are strings such as
-					// options, input file and output file
-					var args = decode ? ['-d', f.name, '-o', outName] : [f.name, '-o', outName];
-					// Input file data
-					// Object literal mapping
-					// file names to Uint8Array
-					var inData = {};
-					inData[f.name] = new Uint8Array(buffer);
+				// Command line arguments
+				// These are strings such as
+				// options, input file and output file
+				var args = decode ? ['-d', f.name, '-o', outName] : [f.name, '-o', outName];
+				// Input file data
+				// Object literal mapping
+				// file names to Uint8Array or Blob/File
+				// Files are read on demand by the worker, so
+				// even large files don't need to fit into memory
+				var inData = {};
+				inData[f.name] = f;
 
-					// Meta-information about the files
-					// that are being created during encoding
-					// Currently MIME type only
-					var outData = {};
-					outData[outName] = {
-						// Its MIME type
-						'MIME': decode ? 'audio/wav' : 'audio/flac'
-					};
+				// Meta-information about the files
+				// that are being created during encoding
+				// Currently MIME type only
+				var outData = {};
+				outData[outName] = {
+					// Its MIME type
+					'MIME': decode ? 'audio/wav' : 'audio/flac'
+				};
 
-					// Finally post all the data to the
-					// worker together with the "encode"
-					// command.
-					worker.postMessage({
-						command: 'encode',
-						args: args,
-						outData: outData,
-						fileData: inData
-					});
+				// Finally post all the data to the
+				// worker together with the "encode"
+				// command.
+				worker.postMessage({
+					command: 'encode',
+					args: args,
+					outData: outData,
+					fileData: inData
 				});
 			});
 
