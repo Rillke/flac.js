@@ -107,13 +107,19 @@
 			.appendTo( $console );
 	}
 	function encode( args ) {
-		var argsForCommandLine = args.slice( 0 );
+		var argsForCommandLine;
 
-		$.each( argsForCommandLine, function( idx, arg ) {
-			argsForCommandLine[ idx ] = arg.replace( /\"/g, '\\"' );
+		// Options with values are displayed as --option="value". A shell
+		// would remove the quotes before passing them to flac, so do the
+		// same here (issue #10).
+		args = $.map( args, function( arg ) {
+			return arg.replace( /^(\-\-[^=]+=)"(.*)"$/, '$1$2' );
+		} );
+		argsForCommandLine = $.map( args, function( arg ) {
+			return arg.replace( /\"/g, '\\"' );
 		} );
 		log( 'encoder@rillke.com$ flac "' + argsForCommandLine.join( '" "' ) + '"' );
-		log( 'loading web worker scripts (0.7 + 2.8 MiB) ...' );
+		log( 'loading web worker scripts (0.1 + 0.5 MiB) ...' );
 
 		if ( !worker ) {
 			err( 'No webworker available.' );
@@ -514,8 +520,25 @@
 			$workerDlg.dialog( 'option', 'title', title );
 		}
 		$workerProgress.fadeOut( 'slow' );
-		worker.terminate();
-		worker = null;
+		if ( worker ) {
+			worker.terminate();
+			worker = null;
+		}
+	}
+
+	// flac overwrites its progress output using backspaces
+	function applyBackspaces( text ) {
+		var chars = [],
+			i;
+
+		for ( i = 0; i < text.length; i++ ) {
+			if ( text[ i ] === '\b' ) {
+				chars.pop();
+			} else {
+				chars.push( text[ i ] );
+			}
+		}
+		return chars.join( '' );
 	}
 
 	function onWorkerMessage( e ) {
@@ -579,8 +602,15 @@
 				cancelWorker();
 				break;
 			case 'log':
-				var lines = $.trim( e.data.values[ 0 ] ).replace( /\r/g, '\n' ),
+			// The worker posts stderr output (which includes flac's version
+			// banner and progress) line by line as 'err'
+			case 'err':
+				var lines = $.trim( applyBackspaces( e.data.values.join( ' ' ) ) ).replace( /\r/g, '\n' ),
 					$lines;
+
+				if ( !lines ) {
+					return;
+				}
 
 				if ( /\nERROR\:/.test( lines ) || /^ERROR\:/.test( lines ) ) {
 					err( lines );
@@ -595,9 +625,9 @@
 				$lines = $info.clone().text( lines ).appendTo( $console );
 				$console.clearQueue().animate({ scrollTop: $console.scrollTop() + $lines.position().top }, 800);
 				break;
-			case 'err':
-				err( e.data.values[ 0 ] );
-				setTimeout( cancelWorker.bind( global, "Error" ), 100 );
+			case 'failed':
+				err( 'flac exited with code ' + e.data.exitCode );
+				cancelWorker( 'Error' );
 				break;
 		}
 	}

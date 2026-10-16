@@ -20,35 +20,41 @@
  * IN THE SOFTWARE.
  */
 
-/*global self: false, FlacEncoder: false, importScripts: false */
-/*jslint vars: false,  white: false */
-/*jshint onevar: false, white: false, laxbreak: true */
-( function( global ) {
+/* global FlacEncoder */
+( function ( global ) {
 	'use strict';
+
+	function loadEncoder() {
+		if ( !global.FlacEncoder ) {
+			global.importScripts( 'FlacEncoder.js' );
+		}
+	}
 
 	/**
 	 * Worker proxy implementing communication between worker and website
-	 *  @class EmsWorkerProxy
-	 *  @singleton
+	 *
+	 * @class EmsWorkerProxy
+	 * @singleton
 	 */
 	global.EmsWorkerProxy = {
-		init: function() {
-			global.onmessage = function( e ) {
+		init: function () {
+			// Encode commands are processed one after another
+			var queue = Promise.resolve();
+
+			global.onmessage = function ( e ) {
 				switch ( e.data.command ) {
 					case 'ping':
 						global.postMessage( { reply: 'pong' } );
 						break;
 					case 'encode':
-						if ( !global.FlacEncoder )  {
-							importScripts( 'FlacEncoder.js' );
-						}
-						FlacEncoder.encode( e.data );
+						loadEncoder();
+						queue = queue.then( function () {
+							return FlacEncoder.encode( e.data );
+						} );
 						break;
 					case 'prefetch':
-						if ( !global.FlacEncoder )  {
-							importScripts( 'FlacEncoder.js' );
-							FlacEncoder.prefetch( e.data );
-						}
+						loadEncoder();
+						FlacEncoder.prefetch( e.data );
 						break;
 				}
 			};
