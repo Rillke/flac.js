@@ -187,3 +187,77 @@ test( 'queues commands posted at once', async ( { page } ) => {
 
 	expect( replies ).toEqual( [ [ 'a.flac' ], [ 'b.flac' ], [ 'c.flac' ] ] );
 } );
+
+test( 'reads Blob and File input without copying it into memory', async ( { page } ) => {
+	const result = await page.evaluate( async () => {
+		const { wav, runCommand, newWorker, blobToBytes } = window.flacTest,
+			// > 4 MB to cross read-ahead chunk boundaries
+			input = wav.makeWav( { frames: 44100 * 30, channels: 2 } ),
+			worker = newWorker(),
+			enc = ( await runCommand( worker, {
+				command: 'encode',
+				args: [ 'input.wav', '-o', 'output.flac' ],
+				fileData: { 'input.wav': new File( [ input ], 'whatever.wav' ) },
+				outData: { 'output.flac': { MIME: 'audio/flac' } }
+			} ) ).at( -1 ),
+			flac = enc.reply === 'done' ? await blobToBytes( enc.values[ 'output.flac' ].blob ) : null,
+			// Mixed: a Blob and a Uint8Array; default output name
+			dec = ( await runCommand( worker, {
+				command: 'encode',
+				args: [ '-d', 'song.flac' ],
+				fileData: { 'song.flac': new Blob( [ flac ] ), 'unused.bin': new Uint8Array( 4 ) },
+				outData: { 'song.wav': { MIME: 'audio/wav' } }
+			} ) ).at( -1 ),
+			decoded = dec.reply === 'done' ? await blobToBytes( dec.values[ 'song.wav' ].blob ) : null;
+
+		worker.terminate();
+		return {
+			enc: enc.reply,
+			dec: dec.reply,
+			lossless: !!decoded && wav.bytesEqual( wav.parseWav( decoded ).data, wav.parseWav( input ).data )
+		};
+	} );
+
+	expect( result ).toEqual( { enc: 'done', dec: 'done', lossless: true } );
+} );
+
+test( 'encodes large files passed as Blob (issue #6)', async ( { page } ) => {
+	test.setTimeout( 180000 );
+	const result = await page.evaluate( async () => {
+		const { wav, runCommand, newWorker } = window.flacTest,
+			minutes = 12,
+			// Build ~127 MB of 16 bit stereo audio from a repeated one second chunk
+			second = wav.makeWav( { frames: 44100 } ),
+			chunk = second.subarray( 44 ),
+			header = wav.makeWav( { frames: 0 } ),
+			view = new DataView( header.buffer ),
+			dataSize = chunk.length * 60 * minutes;
+		view.setUint32( 4, 36 + dataSize, true );
+		view.setUint32( 40, dataSize, true );
+
+		const blob = new Blob( [ header, ...Array( 60 * minutes ).fill( chunk ) ] ),
+			worker = newWorker(),
+			replies = await runCommand( worker, {
+				command: 'encode',
+				args: [ '-0', 'large.wav', '-o', 'large.flac' ],
+				fileData: { 'large.wav': blob },
+				outData: { 'large.flac': { MIME: 'audio/flac' } }
+			} ),
+			last = replies.at( -1 ),
+			progress = replies.filter( ( r ) => r.reply === 'progress' ).at( -1 );
+
+		worker.terminate();
+		return {
+			inputSize: blob.size,
+			reply: last.reply,
+			outputSize: last.reply === 'done' ? last.values[ 'large.flac' ].blob.size : 0,
+			progress: progress && progress.values
+		};
+	} );
+
+	expect( result.inputSize ).toBeGreaterThan( 120e6 );
+	expect( result.reply ).toBe( 'done' );
+	expect( result.outputSize ).toBeGreaterThan( 0 );
+	expect( result.progress[ 0 ] ).toBe( 44100 * 60 * 12 );
+	expect( result.progress[ 2 ] ).toBe( result.outputSize );
+} );

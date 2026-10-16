@@ -26,6 +26,10 @@
 
 	var SCRIPT = 'wasm/flac.js',
 		WASM = 'wasm/flac.wasm.png',
+		// Mount point for Blob input files
+		BLOB_DIR = '/.flacjs-blobs',
+		// Blob input files are read in chunks of this size
+		BLOB_READ_AHEAD = 4 * 1024 * 1024,
 		wasmModulePromise = null,
 		FlacEncoder;
 
@@ -64,6 +68,37 @@
 		return wasmModulePromise;
 	}
 
+	/**
+	 * Makes WORKERFS read Blobs in large chunks. By default, every (small)
+	 * read issued by flac results in a synchronous FileReader call, which
+	 * is several times slower than reading from memory.
+	 *
+	 * @param {Object} WORKERFS
+	 */
+	function enableBlobReadAhead( WORKERFS ) {
+		WORKERFS.stream_ops.read = function ( stream, buffer, offset, length, position ) {
+			var node = stream.node,
+				cache = node.readAhead,
+				start;
+
+			if ( position >= node.size ) {
+				return 0;
+			}
+			length = Math.min( length, node.size - position );
+			if ( !cache || position < cache.start || position + length > cache.start + cache.bytes.length ) {
+				cache = node.readAhead = {
+					start: position,
+					bytes: new Uint8Array( WORKERFS.reader.readAsArrayBuffer(
+						node.contents.slice( position, Math.min( node.size, position + Math.max( length, BLOB_READ_AHEAD ) ) )
+					) )
+				};
+			}
+			start = position - cache.start;
+			buffer.set( cache.bytes.subarray( start, start + length ), offset );
+			return length;
+		};
+	}
+
 	function loadScript() {
 		if ( typeof global.createFlacModule !== 'function' ) {
 			global.importScripts( SCRIPT );
@@ -86,7 +121,9 @@
 		 *
 		 * @param {Object} data
 		 * @param {string[]} data.args Command line arguments
-		 * @param {Object.<string,Uint8Array>} data.fileData Input files
+		 * @param {Object.<string,(Uint8Array|Blob)>} data.fileData Input files.
+		 *  Blobs (and Files) are read on demand instead of being copied into
+		 *  memory, which is preferable for large files.
 		 * @param {Object.<string,Object>} data.outData Output files to read
 		 *  after flac completed; keys are file names, values have a MIME
 		 *  property
@@ -149,13 +186,9 @@
 			}, 'vddd' );
 			Module._flac__utils_set_progress_callback( fPointer );
 
-			// Create all necessary files in MEMFS
+			// Create all necessary files
 			// Do NOT create output files ... (Warning: Output file already exists ...)
-			for ( filename in data.fileData ) {
-				if ( data.fileData.hasOwnProperty( filename ) ) {
-					Module.FS.writeFile( filename, data.fileData[ filename ] );
-				}
-			}
+			FlacEncoder.createInputFiles( Module, data.fileData );
 
 			try {
 				exitCode = Module.callMain( data.args.slice( 0 ) );
@@ -182,6 +215,38 @@
 				}
 			}
 			( data.done || FlacEncoder.done )( data.outData );
+		},
+
+		/**
+		 * Writes Uint8Arrays to MEMFS. Blobs are mounted read-only through
+		 * WORKERFS and linked to their file names, so their data is read on
+		 * demand rather than copied into memory.
+		 *
+		 * @param {Object} Module
+		 * @param {Object.<string,(Uint8Array|Blob)>} fileData
+		 */
+		createInputFiles: function ( Module, fileData ) {
+			/* eslint-disable no-prototype-builtins */
+			var blobs = [],
+				filename, i;
+
+			for ( filename in fileData ) {
+				if ( fileData.hasOwnProperty( filename ) ) {
+					if ( typeof Blob !== 'undefined' && fileData[ filename ] instanceof Blob ) {
+						blobs.push( { name: filename, data: fileData[ filename ] } );
+					} else {
+						Module.FS.writeFile( filename, fileData[ filename ] );
+					}
+				}
+			}
+			if ( blobs.length ) {
+				enableBlobReadAhead( Module.WORKERFS );
+				Module.FS.mkdir( BLOB_DIR );
+				Module.FS.mount( Module.WORKERFS, { blobs: blobs }, BLOB_DIR );
+				for ( i = 0; i < blobs.length; i++ ) {
+					Module.FS.symlink( BLOB_DIR + '/' + blobs[ i ].name, blobs[ i ].name );
+				}
+			}
 		},
 
 		/**

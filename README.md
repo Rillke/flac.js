@@ -106,7 +106,7 @@ worker.postMessage( {
 - `command`: `'encode'|'prefetch'|'ping'` DOMString that either starts encoding (or decoding), or prefetching the worker script and WebAssembly binary. Posting a prefetch command in advance is optional, depends on the user experience you'd like to create and does not require further arguments. If the script is not prefetched, it will be downloaded when `'encode'` is invoked. `'ping'` is answered with `{ reply: 'pong' }`.
 - `args`: Array holding the [command line arguments](https://xiph.org/flac/documentation_tools_flac.html) (DOMString). Use `-d` to decode.
 - `outData`: Object literal of information about the files that should be read out of the worker's file system after encoding completed
-- `fileData`: Object literal of input file data mapping file names to `Uint8Array`s
+- `fileData`: Object literal of input file data mapping file names to `Uint8Array`s, `Blob`s or `File`s. `Blob`s and `File`s (e.g. from an `<input type="file">`) are read on demand instead of being copied into memory, which is the best choice for large files.
 
 Replies posted by the worker:
 - `{ reply: 'progress', values: [ processed, total, extra ] }`: Number of samples processed and the total number of samples. `extra` is the number of bytes written when encoding and the decode position when decoding.
@@ -115,6 +115,9 @@ Replies posted by the worker:
 - `{ reply: 'failed', exitCode: number, values: outData }`: flac exited with an error. Output files that were created anyway have a `blob` property.
 
 A worker can process multiple files. Commands are processed one after another.
+
+#### Large files
+Pass the input as a `File` or `Blob` rather than a `Uint8Array`: it is then read in chunks while encoding and never copied as a whole. The output is kept in memory until it is posted back as a `Blob`. If you have to pass a `Uint8Array`, transfer its buffer instead of copying it: `worker.postMessage( message, [ uint8Array.buffer ] )`.
 
 ### Using flac.js in Node.js
 The module in `worker/wasm/` can also be used directly, e.g. in Node.js:

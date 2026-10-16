@@ -108,8 +108,10 @@ LDFLAGS=(
   -sALLOW_TABLE_GROWTH=1
   -sSTACK_SIZE=1MB
   -sFORCE_FILESYSTEM=1
+  # WORKERFS: Read Blob/File input lazily instead of copying it into memory
+  -lworkerfs.js
   -sEXPORTED_FUNCTIONS=_main,_flac__utils_set_progress_callback
-  -sEXPORTED_RUNTIME_METHODS=callMain,FS,addFunction,removeFunction
+  -sEXPORTED_RUNTIME_METHODS=callMain,FS,WORKERFS,addFunction,removeFunction
 )
 
 echo "flac.js (full) ..."
