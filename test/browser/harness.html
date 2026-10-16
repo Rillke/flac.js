@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>flac.js browser test harness</title>
+	<script type="module">
+		import * as wav from '../helpers/wav.mjs';
+
+		/**
+		 * Posts a command to a flac.js worker and collects all replies until
+		 * the worker reports 'done' or 'failed'.
+		 */
+		function runCommand( worker, message ) {
+			return new Promise( ( resolve, reject ) => {
+				const replies = [];
+				worker.onmessage = ( e ) => {
+					replies.push( e.data );
+					if ( e.data.reply === 'done' || e.data.reply === 'failed' ) {
+						resolve( replies );
+					}
+				};
+				worker.onerror = ( e ) => reject( new Error( e.message ) );
+				worker.postMessage( message );
+			} );
+		}
+
+		function newWorker() {
+			return new Worker( '../../worker/EmsWorkerProxy.js' );
+		}
+
+		async function blobToBytes( blob ) {
+			return new Uint8Array( await blob.arrayBuffer() );
+		}
+
+		window.flacTest = { wav, runCommand, newWorker, blobToBytes };
+		window.flacTestReady = true;
+	</script>
+</head>
+<body></body>
+</html>
