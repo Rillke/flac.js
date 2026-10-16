@@ -3,7 +3,7 @@
 <head>
 	<title>FLAC Encoder</title>
 	<meta charset="UTF-8">
-	<script src="jquery.min.js"></script>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
 <!--
@@ -35,59 +35,71 @@
 		<h1>FLAC Encoder</h1>
 		<progress style="display: inline-block; text-align: center; width: 100%;" value="0" max="100">Your browser does not support this tool. Upgrade to a modern browser, please.</progress>
 		<input id="com-file-analyzer-fileinput" autofocus="" type="file" />
+		<ul id="results"></ul>
+		<pre id="console"></pre>
 
-		<script type='text/javascript'>
-			var $prog = $('progress'),
-				$console = $('#console'),
-				$input = $('input'),
+		<script>
+			var progress = document.querySelector('progress'),
+				consoleOutput = document.getElementById('console'),
+				results = document.getElementById('results'),
+				input = document.getElementById('com-file-analyzer-fileinput'),
 				// Create a new web worker
-				// note that for each file you're going to encode
-				// you'll need to create a new web worker even
-				// if the previous one already finished
-				// This is because the "runtime" is shut down by
-				// Emscripten after one file was encoded
+				// A worker can process multiple files one after another
 				worker = new Worker('worker/EmsWorkerProxy.js');
 
-			// $input is a file input
-			// when its value changed, the user most likely
+			// flac overwrites its progress output using backspaces
+			function appendToConsole(text) {
+				var chars = consoleOutput.textContent.split(''),
+					i;
+				for (i = 0; i < text.length; i++) {
+					if (text[i] === '\b') {
+						chars.pop();
+					} else {
+						chars.push(text[i]);
+					}
+				}
+				consoleOutput.textContent = chars.join('');
+			}
+
+			// Download and compile the encoder while the user picks a file
+			worker.postMessage({ command: 'prefetch' });
+
+			// When the input's value changed, the user most likely
 			// inserted a file
-			$input.change(function() {
+			input.addEventListener('change', function() {
 				// Get the file supplied by the user
-				// and create a FileReader to get its
-				// contents as ArrayBuffer
-				var f = this.files[0],
-					fr = new FileReader();
+				var f = input.files[0];
+				if (!f) {
+					return;
+				}
 
 				// Disable input to prevent the user
 				// from inserting another file
-				$input.attr('disabled', 'disabled');
+				input.disabled = true;
 
-				// Add an event listener to the file reader
-				// so we know when it's done with the whole file
-				fr.addEventListener('loadend', function() {
-					var encodedName = f.name.replace(/\.[^\.]+$/, '.flac');
+				// Read the file's contents as ArrayBuffer
+				f.arrayBuffer().then(function(buffer) {
+					// FLAC input files are decoded, everything else is encoded
+					var decode = /\.(flac|oga|ogg)$/i.test(f.name),
+						outName = f.name.replace(/\.[^.]+$/, '') + (decode ? '.wav' : '.flac');
 
 					// Command line arguments
 					// These are strings such as
 					// options, input file and output file
-					var args = [
-						// Input file *name*
-						f.name
-					];
+					var args = decode ? ['-d', f.name, '-o', outName] : [f.name, '-o', outName];
 					// Input file data
 					// Object literal mapping
 					// file names to Uint8Array
 					var inData = {};
-					// Remember: We set f.name as input file name
-					inData[f.name] = new Uint8Array(fr.result);
+					inData[f.name] = new Uint8Array(buffer);
 
 					// Meta-information about the files
 					// that are being created during encoding
 					// Currently MIME type only
 					var outData = {};
-					outData[encodedName] = {
+					outData[outName] = {
 						// Its MIME type
-						'MIME': 'audio/flac'
+						'MIME': decode ? 'audio/wav' : 'audio/flac'
 					};
 
 					// Finally post all the data to the
@@ -100,37 +112,41 @@
 						fileData: inData
 					});
 				});
-
-				// Read the file as ArrayBuffer
-				// The FileReader will fire the `loadend`
-				// event upon completion.
-				fr.readAsArrayBuffer(f);
 			});
 
 			// Listen for messages by the worker
 			worker.onmessage = function(e) {
-				// If the message is a progress message
-				if (e.data && e.data.reply === 'progress') {
-					vals = e.data.values;
+				var reply = e.data && e.data.reply,
+					vals = e.data && e.data.values,
+					fileName, link, item;
+
+				if (reply === 'progress') {
+					// vals: [samples processed, total samples, bytes written]
 					if (vals[1]) {
 						// ... push the progress bar forward
-						$prog.val(vals[0] / vals[1] * 100);
+						progress.value = vals[0] / vals[1] * 100;
 					}
-				// If the worker is ready
-				} else if (e.data && e.data.reply === 'done') {
-					$prog.val(100);
-					for (fileName in e.data.values) {
+				} else if (reply === 'log' || reply === 'err') {
+					appendToConsole(vals.join(' ') + '\n');
+				} else if (reply === 'done') {
+					progress.value = 100;
+					for (fileName in vals) {
 						// ... offer all files the worker returned
 						// In this case it's only one because we didn't
 						// use a command line argument that would force
 						// flac.js to create another file
-						$('<a>')
-							.text(fileName)
-							.prop('href',
-								window.URL.createObjectURL(e.data.values[fileName].blob)
-							)
-							.insertAfter($input);
+						link = document.createElement('a');
+						link.textContent = fileName;
+						link.download = fileName;
+						link.href = URL.createObjectURL(vals[fileName].blob);
+						item = document.createElement('li');
+						item.appendChild(link);
+						results.appendChild(item);
 					}
+					input.disabled = false;
+				} else if (reply === 'failed') {
+					appendToConsole('flac exited with code ' + e.data.exitCode + '\n');
+					input.disabled = false;
 				}
 			};
 		</script>

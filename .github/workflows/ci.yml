@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Emscripten version used to build the committed worker/wasm/* files.
+  # When changing it, rebuild with ./make.sh and commit the results.
+  EMSCRIPTEN_VERSION: 6.0.12
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  test-node:
+    name: test-node (Node.js ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24, 26]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run test:node
+
+  test-browser:
+    name: test-browser (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npx playwright test --project=${{ matrix.browser }}
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-results-${{ matrix.browser }}
+          path: test-results/
+          retention-days: 7
+
+  # Builds flac.js from the submodules, tests the result and verifies that the
+  # committed files in worker/wasm/ are up to date.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - uses: mymindstorm/setup-emsdk@v16
+        with:
+          version: ${{ env.EMSCRIPTEN_VERSION }}
+          actions-cache-folder: emsdk-cache
+      - run: emcc --version
+      - name: Build
+        run: BUILDDIR="$RUNNER_TEMP/build" ./make.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: flac.js-wasm
+          path: worker/wasm/
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Test build (Node.js)
+        run: npm run test:node
+      - name: Test build (Chromium)
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test --project=chromium
+      - name: Check that committed build output is up to date
+        run: |
+          if ! git diff --quiet -- worker/wasm/; then
+            git diff --stat -- worker/wasm/
+            echo "::error::worker/wasm/ is out of date. Rebuild with ./make.sh using Emscripten $EMSCRIPTEN_VERSION and commit the result (or download the flac.js-wasm artifact of this run)."
+            exit 1
+          fi

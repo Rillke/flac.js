@@ -20,404 +20,221 @@
  * IN THE SOFTWARE.
  */
 
-/*global self: false, Runtime: false, FlacEncoder: false, Module: false, FS: false, EmsArgs: false, console: false, WebAssembly: false */
-/*jslint vars: false,  white: false */
-/*jshint onevar: false, white: false, laxbreak: true, worker: true, strict: false */
-
-( function( global ) {
+/* global createFlacModule */
+( function ( global ) {
 	'use strict';
-	var MainScriptLoader,
-		downloadCompleted,
-		downloadError;
+
+	var SCRIPT = 'wasm/flac.js',
+		WASM = 'wasm/flac.wasm.png',
+		wasmModulePromise = null,
+		FlacEncoder;
+
+	function postLog( reply, args ) {
+		global.postMessage( {
+			reply: reply,
+			values: args
+		} );
+	}
+
+	/**
+	 * Fetches and compiles the WebAssembly binary once per worker so that
+	 * subsequent encode commands do not need to download or compile it again.
+	 *
+	 * The binary is stored with a .png suffix and therefore usually served
+	 * with an image/png MIME type, which rules out
+	 * WebAssembly.compileStreaming().
+	 *
+	 * @return {Promise<WebAssembly.Module>}
+	 */
+	function compileWasm() {
+		if ( !wasmModulePromise ) {
+			wasmModulePromise = fetch( WASM ).then( function ( response ) {
+				if ( !response.ok ) {
+					throw new Error( 'Failed to download ' + WASM + ': HTTP ' + response.status );
+				}
+				return response.arrayBuffer();
+			} ).then( function ( buffer ) {
+				return WebAssembly.compile( buffer );
+			} );
+			// Allow retrying after failures
+			wasmModulePromise.catch( function () {
+				wasmModulePromise = null;
+			} );
+		}
+		return wasmModulePromise;
+	}
+
+	function loadScript() {
+		if ( typeof global.createFlacModule !== 'function' ) {
+			global.importScripts( SCRIPT );
+		}
+	}
 
 	/**
 	 * Manages encoding and progress notifications
-	 *  @class FlacEncoder
-	 *  @singleton
+	 *
+	 * @class FlacEncoder
+	 * @singleton
 	 */
-	global.FlacEncoder = {
-		encode: function( data ) {
-			FlacEncoder.setUpLogging( data );
-			FlacEncoder.monitorWWDownload();
-			MainScriptLoader.downloadAndExecute( data, function() {
-				// Before execute main script ...
-				if ( !global.EmsArgs ){
-					importScripts( 'EmsArgs.js' );
-				}
-				FlacEncoder.setUpModule( data );
-			}, function() {
-				// After the main script was executed ...
-				MainScriptLoader.whenInitialized( function() {
-					FlacEncoder._encode( data );
-				} );
-			} );
-		},
+	FlacEncoder = global.FlacEncoder = {
+		/**
+		 * Runs the flac command line tool with the supplied arguments and
+		 * input files and posts the requested output files back.
+		 *
+		 * A new runtime is instantiated for each invocation, so a worker can
+		 * be used to process multiple files one after another.
+		 *
+		 * @param {Object} data
+		 * @param {string[]} data.args Command line arguments
+		 * @param {Object.<string,Uint8Array>} data.fileData Input files
+		 * @param {Object.<string,Object>} data.outData Output files to read
+		 *  after flac completed; keys are file names, values have a MIME
+		 *  property
+		 * @return {Promise} Resolved when the reply has been posted
+		 */
+		encode: function ( data ) {
+			var log = data.log || FlacEncoder.log,
+				err = data.err || FlacEncoder.err;
 
-		prefetch: function( data ) {
-			if ( global.Module && global.EmsArgs && global.Runtime ) {
-				return;
-			}
-			FlacEncoder.setUpLogging( data );
-			MainScriptLoader.xhrload( data );
-			importScripts( 'EmsArgs.js' );
-		},
-
-		setUpLogging: function( data ) {
-			if ( !global.console ) global.console = {};
-			console.log = function() {
-				( data.log || FlacEncoder.log )(
-					Array.prototype.slice.call( arguments )
-				);
-			};
-
-			console.error = function() {
-				( data.err || FlacEncoder.err )(
-					Array.prototype.slice.call( arguments )
-				);
-			};
-		},
-
-		monitorWWDownload: function() {
-			var lastLog = 0;
-
-			MainScriptLoader.onDownloadComplete = function() {
-				console.log( 'Worker downloaded successfully.' );
-			};
-
-			MainScriptLoader.onDownloadProgress = function( loaded, total ) {
-				var now = Date.now(),
-					diff = now - lastLog;
-
-				if ( diff > 450 ) {
-					lastLog = now;
-					console.log( 'Downloading Flac Encoder code ... ' + Math.round( 100 * loaded / total, 2) + '%' );
-				}
-			};
-			MainScriptLoader.onDownloadError = function( err ) {
-				console.log( 'Failed to download worker utilizing XHR.\n' + err + '\nTrying importScripts() ...' );
-			};
-		},
-
-		setUpModule: function( data ) {
-			/*jshint forin:false */
-			var totalFileLength = 0,
-				filename, memRequired;
-
-			for ( filename in data.fileData ) {
-				if ( !data.fileData.hasOwnProperty( filename ) ) {
-					return;
-				}
-				var fileData = data.fileData[filename];
-
-				totalFileLength += fileData.length;
+			if ( typeof WebAssembly !== 'object' ) {
+				err( [ 'WebAssembly is not supported by this browser.' ] );
+				return Promise.resolve( FlacEncoder.failed( data, 1 ) );
 			}
 
-			memRequired = totalFileLength * 2 + 0x1000000;
-			// Currently "The asm.js rules specify that the heap size must be
-			// a multiple of 16MB or a power of two. Minimum heap size is 64KB"
-			// If we don't correct it here asm will dump errors on us while adjusting
-			// the number but we would ignore following the error and shut down the
-			// worker due to this error
-			memRequired = memRequired - ( memRequired % 0x1000000 ) + 0x1000000;
-
-			global.Module = {
-				TOTAL_MEMORY: memRequired,
-				_main: MainScriptLoader.initialized,
-				noExitRuntime: true,
-				preRun: FlacEncoder.setUpFilesystem,
-				printErr: console.error.bind( console ),
-				monitorRunDependencies: function( runDeps ) {
-					console.log( 'Loading run dependencies. Outstanding: ' + runDeps );
-				},
-				locateFile: function( memFile ) {
-					return memFile
-						.replace( /^flac\.(html|js)\.mem$/, 'asm/flac.mem.png' )
-						.replace( 'flac.wasm', 'wasm/flac.wasm.png' );
-				}
-			};
-		},
-
-		setUpFilesystem: function() {
-			var infoBuff = '',
-				errBuff = '',
-				lastInfoFlush = Date.now(),
-				lastErrFlush = Date.now(),
-				infoTimeout, errTimeout, flushInfo, flushErr;
-
-			FlacEncoder.flushInfo = flushInfo = function() {
-				clearTimeout( infoTimeout );
-				lastInfoFlush = Date.now();
-				if ( infoBuff.replace( /\s*/g, '' ) ) {
-					console.log( infoBuff );
-					infoBuff = '';
-				}
-			};
-			FlacEncoder.flushErr = flushErr = function() {
-				clearTimeout( errTimeout );
-				lastErrFlush = Date.now();
-				if ( errBuff.replace( /\s*/g, '' ) ) {
-					console.log( errBuff );
-					errBuff = '';
-				}
-			};
-
-			FS.init( global.prompt || function() {
-				console.log( 'Input requested from within web worker. Returning empty string.' );
-				return '';
-			}, function( infoChar ) {
-				infoBuff += String.fromCharCode( infoChar );
-				clearTimeout( infoTimeout );
-				infoTimeout = setTimeout( flushInfo, 5 );
-				if ( lastInfoFlush + 700 < Date.now() ) {
-					flushInfo();
-				}
-			}, function( errChar ) {
-				errBuff += String.fromCharCode( errChar );
-				clearTimeout( errTimeout );
-				errTimeout = setTimeout( flushErr, 5 );
-				if ( lastErrFlush + 700 < Date.now() ) {
-					flushErr();
-				}
-			} );
-		},
-
-		done: function( args ) {
-			global.postMessage( {
-				reply: 'done',
-				values: args
-			} );
-		},
-
-		progress: function( args ) {
-			global.postMessage( {
-				reply: 'progress',
-				values: args
-			} );
-		},
-
-		log: function( args ) {
-			global.postMessage( {
-				reply: 'log',
-				values: args
-			} );
-		},
-
-		err: function( args ) {
-			global.postMessage( {
-				reply: 'err',
-				values: args
-			} );
-		},
-
-		_encode: function( data ) {
-			/*jshint forin:false */
-			var fPointer;
-
-			// Get a pointer for the callback function
-			fPointer = Runtime.addFunction( function( encoded, total, bytesWritten ) {
-				var filename, fileContent, b;
-
-				// We *know* that writing to to stdin and/or stderr completed
-				FlacEncoder.flushInfo();
-				FlacEncoder.flushErr();
-
-				if ( encoded === total && encoded === 100 && bytesWritten === -1 ) {
-					// Read output files
-					for ( filename in data.outData ) {
-						if ( !data.outData.hasOwnProperty( filename ) ) {
-							return;
+			return compileWasm().then( function ( wasmModule ) {
+				loadScript();
+				return new Promise( function ( resolve, reject ) {
+					createFlacModule( {
+						print: function ( text ) {
+							log( [ text ] );
+						},
+						printErr: function ( text ) {
+							err( [ text ] );
+						},
+						// Instantiate the module compiled by compileWasm()
+						instantiateWasm: function ( imports, receiveInstance ) {
+							WebAssembly.instantiate( wasmModule, imports ).then( function ( instance ) {
+								receiveInstance( instance, wasmModule );
+							}, reject );
+							return {};
 						}
-						fileContent = FS.readFile( filename, {
-							encoding: 'binary'
-						} );
-						b = new Blob(
-							[fileContent],
-							{type: data.outData[filename].MIME}
-						);
-						data.outData[filename].blob = b;
-					}
-					(data.done || FlacEncoder.done)( data.outData );
-				} else {
-					(data.progress || FlacEncoder.progress)(
-						Array.prototype.slice.call( arguments )
-					);
-				}
+					} ).then( resolve, reject );
+				} );
+			} ).then( function ( Module ) {
+				return FlacEncoder.run( Module, data );
+			} ).catch( function ( e ) {
+				err( [ String( e && e.message || e ) ] );
+				return FlacEncoder.failed( data, 1 );
 			} );
+		},
 
-			// Set module arguments (command line arguments)
-			var args = data.args,
-				argsCloned = args.slice( 0 );
+		/**
+		 * Downloads and compiles the WebAssembly binary in advance.
+		 *
+		 * @return {Promise}
+		 */
+		prefetch: function () {
+			return compileWasm().then( loadScript ).catch( function ( e ) {
+				FlacEncoder.err( [ String( e && e.message || e ) ] );
+			} );
+		},
 
-			args.unshift( 'flac.js' );
-			Module['arguments'] = argsCloned;
+		run: function ( Module, data ) {
+			/* eslint-disable no-prototype-builtins */
+			var progress = data.progress || FlacEncoder.progress,
+				exitCode, filename, fPointer;
 
-			// Create all neccessary files in MEMFS or whatever
-			// the mounted file system is
-			var filename;
+			fPointer = Module.addFunction( function ( processed, total, extra ) {
+				progress( [ processed, total, extra ] );
+			}, 'vddd' );
+			Module._flac__utils_set_progress_callback( fPointer );
 
-			for ( filename in data.fileData ) {
-				if ( !data.fileData.hasOwnProperty( filename ) ) {
-					return;
-				}
-				var fileData = data.fileData[filename],
-					stream = FS.open( filename, 'w+' );
-
-				FS.write( stream, fileData, 0, fileData.length );
-				FS.close( stream );
-			}
-
+			// Create all necessary files in MEMFS
 			// Do NOT create output files ... (Warning: Output file already exists ...)
-
-			// Prepare C function to be called
-			var encode_buffer = Module.cwrap( 'main_js', 'number', ['number', 'number', 'number'] );
-
-			// Copy command line args to Emscripten Heap and get a pointer to them
-			EmsArgs.cArgsPointer( args, function( pointerHeap ) {
-				try {
-					global.Module.noExitRuntime = false;
-					encode_buffer( args.length, pointerHeap.byteOffset, fPointer );
-				} catch ( ex ) {
-					console.error( ex.message || ex );
+			for ( filename in data.fileData ) {
+				if ( data.fileData.hasOwnProperty( filename ) ) {
+					Module.FS.writeFile( filename, data.fileData[ filename ] );
 				}
-			} );
-		}
-	};
-
-	/**
-	 * Downloads main script
-	 *  @class MainScriptLoader
-	 *  @singleton
-	 *  @private
-	 */
-	MainScriptLoader = {
-		name: ( global.WebAssembly ? 'wasm/' : 'asm/' ) + 'flac.js',
-		text: null,
-		status: 'idle',
-		xhrload: function( data, complete, err ) {
-			var xhrfailed = function( errMsg ) {
-				if ( MainScriptLoader.status !== 'loading' ) {
-					return;
-				}
-				MainScriptLoader.status = 'xhrfailed';
-				MainScriptLoader.onDownloadError( errMsg );
-				if ( err ) err();
-			};
-
-			if ( global.__debug ) {
-				MainScriptLoader.status = 'loading';
-				return xhrfailed( 'Debug modus enabled.' );
 			}
-
-			var xhr = new XMLHttpRequest();
-			xhr.onreadystatechange = function() {
-				if ( xhr.readyState === xhr.DONE ) {
-					if ( xhr.status === 200 || xhr.status === 0 && location.protocol === 'file:' ) {
-						MainScriptLoader.text = xhr.responseText;
-						MainScriptLoader.status = 'loaded';
-						MainScriptLoader.onDownloadComplete();
-						if ( complete ) complete();
-						if ( downloadCompleted ) downloadCompleted();
-					} else {
-						xhrfailed( 'Server status ' +  xhr.status );
-					}
-				}
-			};
-			xhr.onprogress = function( e ) {
-				if ( e.lengthComputable ) {
-					MainScriptLoader.onDownloadProgress( e.loaded, e.total );
-				}
-			};
-			xhr.onerror = function() {
-				xhrfailed( 'There was an error with the request.' );
-			};
-			xhr.ontimeout = function() {
-				xhrfailed( 'Request timed out.' );
-			};
 
 			try {
-				MainScriptLoader.status = 'loading';
-				xhr.open( 'GET', MainScriptLoader.name );
-				xhr.send( null );
-			} catch ( ex ) {
-				xhrfailed( ex.message || ex );
+				exitCode = Module.callMain( data.args.slice( 0 ) );
+			} catch ( e ) {
+				// exit() was called, e.g. by die(); callMain() usually handles
+				// this but be defensive
+				exitCode = e && typeof e.status === 'number' ? e.status : 1;
+				if ( !( e && e.name === 'ExitStatus' ) ) {
+					( data.err || FlacEncoder.err )( [ String( e && e.message || e ) ] );
+				}
 			}
+
+			if ( exitCode !== 0 ) {
+				return FlacEncoder.failed( data, exitCode, Module );
+			}
+
+			// Read output files
+			for ( filename in data.outData ) {
+				if ( data.outData.hasOwnProperty( filename ) ) {
+					data.outData[ filename ].blob = new Blob(
+						[ Module.FS.readFile( filename ) ],
+						{ type: data.outData[ filename ].MIME }
+					);
+				}
+			}
+			( data.done || FlacEncoder.done )( data.outData );
 		},
-		onDownloadProgress: function( /* loaded, total */ ) {},
-		onDownloadComplete: function() {},
-		onDownloadError: function( /* description */ ) {},
-		downloadAndExecute: function( data, beforeExecution, afterExecution ) {
-			switch ( MainScriptLoader.status ) {
-				case 'idle':
-					MainScriptLoader.xhrload( data, function() {
-						beforeExecution();
-						MainScriptLoader.execute();
-						afterExecution();
-					}, function() {
-						beforeExecution();
-						importScripts( MainScriptLoader.name );
-						afterExecution();
-					} );
-					break;
-				case 'xhrfailed':
-					beforeExecution();
-					importScripts( MainScriptLoader.name );
-					afterExecution();
-					break;
-				case 'loaded':
-					beforeExecution();
-					MainScriptLoader.execute();
-					afterExecution();
-					break;
-				case 'loading':
-					downloadCompleted = function() {
-						downloadCompleted = null;
-						downloadError = null;
-						beforeExecution();
-						MainScriptLoader.execute();
-						afterExecution();
-					};
-					downloadError = function() {
-						beforeExecution();
-						importScripts( MainScriptLoader.name );
-						afterExecution();
-					};
-					break;
+
+		/**
+		 * Reports that flac exited with an error. Output files that were
+		 * created anyway are attached.
+		 *
+		 * @param {Object} data
+		 * @param {number} exitCode
+		 * @param {Object} [Module]
+		 */
+		failed: function ( data, exitCode, Module ) {
+			/* eslint-disable no-prototype-builtins */
+			var filename;
+
+			if ( Module ) {
+				for ( filename in data.outData ) {
+					if ( data.outData.hasOwnProperty( filename ) && Module.FS.analyzePath( filename ).exists ) {
+						data.outData[ filename ].blob = new Blob(
+							[ Module.FS.readFile( filename ) ],
+							{ type: data.outData[ filename ].MIME }
+						);
+					}
+				}
 			}
+			( data.failed || FlacEncoder.postFailed )( exitCode, data.outData );
 		},
-		execute: function() {
-			if ( !MainScriptLoader.text ) {
-				throw new Error( 'Main script text must be loaded before!' );
-			}
-			global.callEval( MainScriptLoader.text );
+
+		done: function ( outData ) {
+			global.postMessage( {
+				reply: 'done',
+				values: outData
+			} );
 		},
-		queue: [],
-		isInitialized: false,
-		whenInitialized: function( cb ) {
-			if ( MainScriptLoader.isInitialized ) {
-				cb();
-			} else {
-				MainScriptLoader.queue.push( cb );
-			}
+
+		postFailed: function ( exitCode, outData ) {
+			global.postMessage( {
+				reply: 'failed',
+				exitCode: exitCode,
+				values: outData
+			} );
 		},
-		initialized: function() {
-			MainScriptLoader.isInitialized = true;
-			while ( MainScriptLoader.queue.length ) {
-				MainScriptLoader.queue.shift()();
-			}
+
+		progress: function ( args ) {
+			postLog( 'progress', args );
+		},
+
+		log: function ( args ) {
+			postLog( 'log', args );
+		},
+
+		err: function ( args ) {
+			postLog( 'err', args );
 		}
 	};
 
-}( self ) );
-
-( function( global ) {
-	/* jshint evil: true */
-	global.callEval = function ( s ) {
-		var Module = global.Module,
-			ret = eval( s );
-
-		global.FS = FS;
-		global.Module = Module;
-		global.Runtime = Runtime;
-		return ret;
-	};
 }( self ) );
